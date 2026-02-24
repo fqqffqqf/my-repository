@@ -211,6 +211,21 @@
             color: black;
             font-weight: bold;
         }
+
+		/* 高亮选中的地址配置按钮 */
+       .config-btn.active {
+        background: #ff6b35; /* 你可以换成喜欢的颜色 */
+         color: white;
+        }
+		
+		/* 新增：复制按钮点击时的高亮样式 */
+		.copy-btn.clicked {
+			border: 3px solid #00ffff; /* 青色实线边框 */
+			box-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff; /* 强烈的青色发光 */
+			outline: none;
+			/* background-color: #28a745; /* 可选：保留原背景色 */
+		}
+		
     </style>
 </head>
 <body>
@@ -538,7 +553,16 @@
                     const bindSuffix = currentBindRule ? currentBindRule[c[0]] || '' : '';
                     const suffixText = bindSuffix ? ` (尾号:${bindSuffix})` : '';
                     b.textContent = `${c[0]}.${c[1]} ${suffixText}`;
-                    b.onclick = () => genAddress(c);
+                    	/ --- 新增逻辑：点击按钮时 ---/
+					b.onclick = function() {
+						// 先移除所有按钮的 'active' 类
+						document.querySelectorAll('#addressConfigBtns .config-btn').forEach(btn => {
+							btn.classList.remove('active');
+						});
+						// 给当前点击的按钮加上 'active' 类
+						this.classList.add('active');
+						genAddress(c);
+					}
                     box.appendChild(b);
                 }
             });
@@ -888,9 +912,14 @@
         function bindCopy() {
             document.querySelectorAll('.copy-btn').forEach(b => {
                 b.onclick = function () {
+					// --- 新增：点击时添加高亮样式 ---
+					 document.querySelectorAll('.copy-btn').forEach(btn => {
+						btn.classList.remove('clicked');
+					});
+                    this.classList.add('clicked');
                     navigator.clipboard.writeText(decodeURIComponent(this.dataset.txt));
                     this.nextElementSibling.classList.add('show');
-                    setTimeout(() => this.nextElementSibling.classList.remove('show'), 1500);
+                    setTimeout(() => this.nextElementSibling.classList.remove('show'), 3500);
                 }
             });
         }
@@ -899,4 +928,5 @@
 </body>
 
 </html>
+
 
