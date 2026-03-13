@@ -5,6 +5,7 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>地址生成器</title>
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * {
             margin: 0;
@@ -211,6 +212,21 @@
             color: black;
             font-weight: bold;
         }
+
+		/* 高亮选中的地址配置按钮 */
+       .config-btn.active {
+        background: #ff6b35; /* 你可以换成喜欢的颜色 */
+         color: white;
+        }
+		
+		/* 新增：复制按钮点击时的高亮样式 */
+		.copy-btn.clicked {
+			border: 3px solid #00ffff; /* 青色实线边框 */
+			box-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff; /* 强烈的青色发光 */
+			outline: none;
+			/* background-color: #28a745; /* 可选：保留原背景色 */
+		}
+		
     </style>
 </head>
 <body>
@@ -258,6 +274,22 @@
     </div>
 
     <script>
+
+let ty_supabase;
+        function ty_init(url, key) {
+            if (typeof supabase !== 'undefined') {
+                ty_supabase = supabase.createClient(url, key);
+                console.log("Ty Supabase client initialized.");
+            } else {
+                console.error("Supabase CDN library not loaded.");
+            }
+        }
+
+        const SUPABASE_URL = 'https://yjbnqdrnoetgmmrtkszo.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_5z0BoTQwqPwWGaOetcVf0g_UknvjY9B';
+        ty_init(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+		
            let combinedLocations = [
         "便利店门口",
         "超市门口",
@@ -379,7 +411,7 @@
         let allGenerateConfigs = []; // 所有可生成地址的数据
         let suffixBindRules = {}; // 多组尾号绑定规则 {标识1: {1:'1234', 2:'3678'}, 标识2: {4:'5678',5:'8901'}}
 
-        window.onload = function () {
+        window.onload = async function () {
             // 初始化
             loadUserCustomConfigs();
             loadSuffixBindRules();
@@ -397,6 +429,25 @@
                 updateSuffixTip();
                 renderAllGenerateButtons(); // 输入变化立即重新渲染按钮（筛选）
             });
+
+			const excludeIds = LOCAL_FIXED_CONFIGS.map(item => parseInt(item[0], 10));
+			
+            try {
+                const { data: dat, error } = await ty_supabase.from('dzscq').select('*').eq('sx', "1").eq('falt', "1").eq('yc', "1").not('id', 'in', `(${excludeIds.join(',')})`).order('id', { ascending: true });
+                if (error) throw error;
+				const data =dat.map(item => [Number(item.id) + 1, item.name, item.dz, item.dm]);
+                if (JSON.stringify(data) !== JSON.stringify(userCustomConfigs)) {
+                    localStorage.setItem('userAddressConfigs', JSON.stringify(data));
+			        loadUserCustomConfigs();
+					mergeAllGenerateConfigs();
+					renderAllGenerateButtons();
+                   
+                    console.log('🔄 已从 Supabase 更新数据');
+                }
+            } catch (error) {
+                console.error('❌ Supabase 请求失败:', error);
+               
+            }
 
            
         };
@@ -538,7 +589,16 @@
                     const bindSuffix = currentBindRule ? currentBindRule[c[0]] || '' : '';
                     const suffixText = bindSuffix ? ` (尾号:${bindSuffix})` : '';
                     b.textContent = `${c[0]}.${c[1]} ${suffixText}`;
-                    b.onclick = () => genAddress(c);
+                    	/ --- 新增逻辑：点击按钮时 ---/
+					b.onclick = function() {
+						// 先移除所有按钮的 'active' 类
+						document.querySelectorAll('#addressConfigBtns .config-btn').forEach(btn => {
+							btn.classList.remove('active');
+						});
+						// 给当前点击的按钮加上 'active' 类
+						this.classList.add('active');
+						genAddress(c);
+					}
                     box.appendChild(b);
                 }
             });
@@ -888,9 +948,14 @@
         function bindCopy() {
             document.querySelectorAll('.copy-btn').forEach(b => {
                 b.onclick = function () {
+					// --- 新增：点击时添加高亮样式 ---
+					 document.querySelectorAll('.copy-btn').forEach(btn => {
+						btn.classList.remove('clicked');
+					});
+                    this.classList.add('clicked');
                     navigator.clipboard.writeText(decodeURIComponent(this.dataset.txt));
                     this.nextElementSibling.classList.add('show');
-                    setTimeout(() => this.nextElementSibling.classList.remove('show'), 1500);
+                    setTimeout(() => this.nextElementSibling.classList.remove('show'), 2500);
                 }
             });
         }
@@ -899,3 +964,5 @@
 </body>
 
 </html>
+
+
