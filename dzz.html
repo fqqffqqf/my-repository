@@ -7,6 +7,40 @@
     <title>地址生成器</title>
 	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
+	
+	
+	 /* 弹窗样式 */
+    #updateModal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
+      background-color: rgba(0,0,0,0.5);
+    }
+    .modal-content {
+      background-color: white;
+      margin: 15% auto;
+      padding: 20px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 400px;
+    }
+    .checkbox-container {
+      margin: 10px 0;
+    }
+    button {
+      margin: 5px;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn-update { background-color: #4CAF50; color: white; }
+    .btn-later { background-color: #f1f1f1; }
+	
+	
+	
         * {
             margin: 0;
             padding: 0;
@@ -272,6 +306,26 @@
         </div>
         
     </div>
+		
+		<!-- 更新弹窗 -->
+	<div id="updateModal">
+	  <div class="modal-content">
+		<h3>🎉 发现新内容！</h3>
+		<p>有新的地址配置更新，是否立即应用？</p>
+		
+	
+		
+		<div class="checkbox-container">
+			<label style="display: inline-flex; align-items: center; white-space: nowrap;">
+			<input type="checkbox" id="dontShowToday" style="margin: 0;">
+			<span style="font-size: 14px;">24小时不再提示</span>
+			</label>
+		</div>
+		
+		<button class="btn-update" onclick="handleUpdate(true)">立即更新</button>
+		<button class="btn-later" onclick="handleUpdate(false)">稍后提醒</button>
+	  </div>
+	</div>
 
     <script>
 
@@ -410,6 +464,7 @@ let ty_supabase;
         let userCustomConfigs = []; // 用户自定义配置
         let allGenerateConfigs = []; // 所有可生成地址的数据
         let suffixBindRules = {}; // 多组尾号绑定规则 {标识1: {1:'1234', 2:'3678'}, 标识2: {4:'5678',5:'8901'}}
+		let data;
 
         window.onload = async function () {
             // 初始化
@@ -435,18 +490,14 @@ let ty_supabase;
             try {
                 const { data: dat, error } = await ty_supabase.from('dzscq').select('*').eq('sx', "1").eq('falt', "1").eq('yc', "1").not('id', 'in', `(${excludeIds.join(',')})`).order('id', { ascending: true });
                 if (error) throw error;
-				const data =dat.map(item => [Number(item.id) + 1, item.name, item.dz, item.dm]);
-				const filteredConfigs = userCustomConfigs.filter(item => {
-                const id = parseInt(item[0], 10); // 转成数字比较
-                return item[0] === "8" || id >= 50;
-                });
-                if (JSON.stringify(data) !== JSON.stringify(filteredConfigs)) {
-                    localStorage.setItem('userAddressConfigs', JSON.stringify(data));
-			        loadUserCustomConfigs();
-					mergeAllGenerateConfigs();
-					renderAllGenerateButtons();
-                   
-                    console.log('🔄 已从 Supabase 更新数据');
+				const da =dat.map(item => [Number(item.id) + 1, item.name, item.dz, item.dm]);
+				 data =mergeAndSortConfigs(userCustomConfigs,da);
+              
+                if (JSON.stringify(data) !== JSON.stringify(userCustomConfigs)) {
+				console.log(JSON.stringify(data) )
+				console.log(JSON.stringify(userCustomConfigs) )
+					 checkForUpdate();
+                    
                 }
             } catch (error) {
                 console.error('❌ Supabase 请求失败:', error);
@@ -963,10 +1014,74 @@ let ty_supabase;
                 }
             });
         }
+			
+
+		/*==============================模态框=============================*/			
+				 // 检查是否应该显示弹窗
+		  function checkForUpdate() {
+			const lastDismissed = localStorage.getItem('update_dismissed_until');
+			const now = Date.now();
+
+			// 如果没设置“不再提示”，或者已过期，则显示弹窗
+			if (!lastDismissed || now > parseInt(lastDismissed)) {
+			  document.getElementById('updateModal').style.display = 'block';
+			}
+		  }
+
+		  // 处理用户点击
+		  function handleUpdate(doUpdate) {
+			const dontShow = document.getElementById('dontShowToday').checked;
+
+			if (dontShow) {
+			  // 设置 24 小时后过期（单位：毫秒）
+			  const expireTime = Date.now() + 24 * 60 * 60 * 1000;
+			  localStorage.setItem('update_dismissed_until', expireTime.toString());
+			}
+
+			// 关闭弹窗
+			document.getElementById('updateModal').style.display = 'none';
+
+			if (doUpdate) {
+			  localStorage.setItem('userAddressConfigs', JSON.stringify(data));
+			        loadUserCustomConfigs();
+					mergeAllGenerateConfigs();
+					renderAllGenerateButtons();
+                   
+                    console.log('🔄 已从 Supabase 更新数据');
+			}
+		  }
+		
+		
+		
+		
+		
+		function mergeAndSortConfigs(arr1, arr2) {
+		  // 1. 筛选  id 在 [1, 50] 且 ≠ "8" 的项
+		  const itemsToCopy = arr1.filter(item => {
+			const idStr = item[0];
+			const idNum = parseInt(idStr, 10);
+			return !isNaN(idNum) && idNum >= 1 && idNum <= 50 && idNum !== 8;
+		  });
+
+		  // 2. 浅拷贝所有项（
+		  const copiedFromArr1 = itemsToCopy.map(item => [...item]);
+		  const copiedArr2 = arr2.map(item => [...item]);
+
+		  // 3. 合并
+		  const merged = [...copiedArr2, ...copiedFromArr1];
+
+		  // 4. 按 id 数字升序排序
+		  merged.sort((a, b) => {
+			const idA = parseInt(a[0], 10);
+			const idB = parseInt(b[0], 10);
+			return idA - idB; 
+		  });
+
+		  return merged;
+		}
+		
 
     </script>
 </body>
 
 </html>
-
-
