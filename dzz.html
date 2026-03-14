@@ -528,7 +528,21 @@ let ty_supabase;
         // 加载用户自定义配置
         function loadUserCustomConfigs() {
             const saved = localStorage.getItem('userAddressConfigs');
-            userCustomConfigs = saved ? JSON.parse(saved) : [];
+            
+            if (saved) {
+                try {
+                    userCustomConfigs = JSON.parse(saved);
+                    console.log("✅ 成功加载本地用户配置:", userCustomConfigs);
+                } catch (e) {
+                    console.error("❌ 解析本地用户配置失败:", e);
+                    console.log("尝试解析的内容:", saved);
+                    userCustomConfigs = []; // 解析失败则使用空数组
+                }
+            } else {
+                 console.log("📝 本地未找到用户配置，使用空数组。");
+                 userCustomConfigs = []; // 如果没有存储项，初始化为空数组
+            }
+            
         }
 
         // 保存用户自定义配置
