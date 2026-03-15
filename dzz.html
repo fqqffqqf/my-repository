@@ -447,7 +447,7 @@ let ty_supabase;
 				 const { data: dat, error } = await ty_supabase.from('ddzscq').select('*').eq('sx', "1").eq('falt', "1").eq('yc', "1").order('id', { ascending: true });
                 
 				if (error) throw error;
-				const da =dat.map(item => [Number(item.id) + 1, item.name, item.dz, item.dm]);
+				const da =dat.map(item => [(Number(item.id) + 1)+"" ,item.name, item.dz, item.dm]);
 				
 				
 				 data =mergeAndSortConfigs(userCustomConfigs,da);
