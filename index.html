@@ -5,7 +5,13 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>地址生成器</title>
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
+	
+	
+
+	
+	
         * {
             margin: 0;
             padding: 0;
@@ -135,7 +141,7 @@
         }
 
         .config-btn {
-            padding: 10px 20px;
+            padding: 3px 6px;
             background: #007bff;
             color: white;
             border: none;
@@ -226,6 +232,7 @@
 			/* background-color: #28a745; /* 可选：保留原背景色 */
 		}
 
+
                 /* Toast 容器 */
         #toast-container {
             position: fixed;
@@ -247,6 +254,7 @@
             opacity: 0;
             transition: opacity 0.3s ease, transform 0.3s ease;
             transform: translateY(-10px);
+            margin-top: 10px;
         }
 
         .toast.show {
@@ -258,7 +266,8 @@
         .toast.success { background: rgba(40, 167, 69, 0.9); } /* 绿色 */
         .toast.warning { background: rgba(255, 193, 7, 0.9); color: #212529; } /* 黄色 */
         .toast.error   { background: rgba(220, 53, 69, 0.9); } /* 红色 */
-                
+
+		
     </style>
 </head>
 <body>
@@ -304,8 +313,26 @@
         </div>
         
     </div>
+		
+
 
     <script>
+
+let ty_supabase;
+        function ty_init(url, key) {
+            if (typeof supabase !== 'undefined') {
+                ty_supabase = supabase.createClient(url, key);
+                console.log("Ty Supabase client initialized.");
+            } else {
+                console.error("Supabase CDN library not loaded.");
+            }
+        }
+
+        const SUPABASE_URL = 'https://yjbnqdrnoetgmmrtkszo.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_5z0BoTQwqPwWGaOetcVf0g_UknvjY9B';
+        ty_init(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+		
            let combinedLocations = [
         "便利店门口",
         "超市门口",
@@ -410,31 +437,23 @@
 
         // ====================== 1. 本地基础数据 ======================
         const LOCAL_FIXED_CONFIGS =[
-  ["8", "北京(动物园)", "北京北京市西城区展览路街道", "return \"展览路街道动物园世纪天乐批发市场\"+numb(1,99)+\"排\"+ numb(1,99)+\"号\"+combinedLocations[Math.floor(Math.random() * combinedLocations.length)].replace(/门口/g,\"\");"],
-  ["211", "上海普陀收少量邮政", "上海市普陀区宜川路街道宜川路39弄94号", "return C();"],
-  ["213", "杭州潮鸣街道", "浙江省杭州市拱墅区潮鸣街道光芒巷25号", "return B();"],
-  ["216", "上海长宁江苏路", "上海市长宁区江苏路街道延安西路603弄五支弄", "return B();"],
-  ["221", "上海虹口公平路", "上海市虹口区嘉兴路街道公平路761号虹业大厦A座", "return B();"],
-  ["223", "北京(石景山)", "北京市石景山区古城街道融景城三角地200号院", "return zm(1,3,2)+\"区\"+numb(1,20)+\"栋\"+numb(1,20)+\"单元;\""],
-  ["224", "上海广中路(收少量邮政)", "上海市虹口区广中路街道同心路133号", "return A();"],
-  ["225", "杭州王马路", "浙江省杭州市拱墅区东新街道王马路18号 ", "return A();"],
-  ["226", "3元3专属地址", "浙江省杭州市拱墅区上塘街道湖州东路600号", "return A();"],
-  ["227", "北京朝阳", "北京市朝阳区双井街道后现代城C区南侧百子湾公园", "return A();"]
 ];
 
         // ====================== 全局变量 ======================
         let userCustomConfigs = []; // 用户自定义配置
         let allGenerateConfigs = []; // 所有可生成地址的数据
         let suffixBindRules = {}; // 多组尾号绑定规则 {标识1: {1:'1234', 2:'3678'}, 标识2: {4:'5678',5:'8901'}}
+		let data=[];
 
-        window.onload = function () {
+        window.onload = async function () {
             // 初始化
+			bindClearUserConfigsEvent(); // 绑定清空用户配置事件
             loadUserCustomConfigs();
             loadSuffixBindRules();
             mergeAllGenerateConfigs();
             loadPhoneHistory();
             bindImportExportEvents();
-            bindClearUserConfigsEvent(); // 绑定清空用户配置事件
+            
             // 渲染页面
             renderAllGenerateButtons();
 
@@ -445,16 +464,63 @@
                 updateSuffixTip();
                 renderAllGenerateButtons(); // 输入变化立即重新渲染按钮（筛选）
             });
-alert(1)
+
+			//const excludeIds = LOCAL_FIXED_CONFIGS.map(item => parseInt(item[0], 10)-1);
+			
+            try {
+                //const { data: dat, error } = await ty_supabase.from('ddzscq').select('*').eq('sx', "1").eq('falt', "1").eq('yc', "1").not('id', 'in', `(${excludeIds.join(',')})`).order('id', { ascending: true });
+                
+				 const { data: dat, error } = await ty_supabase.from('ddzscq').select('*').eq('sx', "1").eq('falt', "1").eq('yc', "1").order('id', { ascending: true });
+                
+				if (error) throw error;
+				const da =dat.map(item => [(Number(item.id) + 1)+"" ,item.name, item.dz, item.dm]);
+				
+				
+				 data =mergeAndSortConfigs(userCustomConfigs,da);
+              console.log(JSON.stringify(data) )
+				console.log(JSON.stringify(userCustomConfigs) )
+                if (JSON.stringify(data) !== JSON.stringify(userCustomConfigs)) {
+				
+					 localStorage.setItem('userAddressConfigs', JSON.stringify(data));
+			        loadUserCustomConfigs();
+					mergeAllGenerateConfigs();
+					renderAllGenerateButtons();
+                   
+                    console.log('🔄 已从 Supabase 更新数据');
+                    
+                }else{
+					console.log('🔄 已从 缓存更新数据');
+				
+				}
+            } catch (error) {
+                console.error('❌ Supabase 请求失败:', error);
+               
+            }
+
            
         };
 
         // ====================== 存储相关 ======================
-        // 加载用户自定义配置
+       // 加载用户自定义配置
         function loadUserCustomConfigs() {
             const saved = localStorage.getItem('userAddressConfigs');
-            userCustomConfigs = saved ? JSON.parse(saved) : [];
+            
+            if (saved) {
+                try {
+                    userCustomConfigs = JSON.parse(saved);
+                    console.log("✅ 成功加载本地用户配置:", userCustomConfigs);
+                } catch (e) {
+                    console.error("❌ 解析本地用户配置失败:", e);
+                    console.log("尝试解析的内容:", saved);
+                    userCustomConfigs = []; // 解析失败则使用空数组
+                }
+            } else {
+                 console.log("📝 本地未找到用户配置，使用空数组。");
+                 userCustomConfigs = []; // 如果没有存储项，初始化为空数组
+            }
+            
         }
+
 
         // 保存用户自定义配置
         function saveUserCustomConfigs() {
@@ -482,7 +548,7 @@ alert(1)
                 saveSuffixBindRules();
                 document.getElementById('suffixTip').textContent = '(输入绑定标识自动筛选地址并匹配尾号)';
                 renderAllGenerateButtons();
-                alert('已清空所有尾号绑定规则！');
+               showSuccess('已清空所有尾号绑定规则！');
             }
         }
 
@@ -490,7 +556,7 @@ alert(1)
         function getAutoId() {
             // 收集所有已存在的ID（基础数据+自定义配置）
             const allIds = [...LOCAL_FIXED_CONFIGS.map(c => Number(c[0])), ...userCustomConfigs.map(c => Number(c[0]))];
-            let newId = 51; // 初始值大于50
+            let newId = 1; // 初始值大于50
 
             // 找到第一个未被使用的大于50的ID
             while (allIds.includes(newId)) {
@@ -586,8 +652,7 @@ alert(1)
                     const bindSuffix = currentBindRule ? currentBindRule[c[0]] || '' : '';
                     const suffixText = bindSuffix ? ` (尾号:${bindSuffix})` : '';
                     b.textContent = `${c[0]}.${c[1]} ${suffixText}`;
-
-                     // 每个按钮有自己的状态
+                    // 每个按钮有自己的状态
 					let pressTimer = null;
 					let isLongPress = false;
 					
@@ -614,7 +679,7 @@ alert(1)
 					
 					 // 👇 长按开始
 					function startPress(e) {
-					  e.preventDefault();
+					 
 					  isLongPress = false;
 					  clearTimeout(pressTimer);
 					  pressTimer = setTimeout(() => {
@@ -680,7 +745,7 @@ alert(1)
                     rule: rule
                 };
             } catch (e) {
-                alert(`尾号绑定规则解析失败：${e.message}`);
+                showError(`尾号绑定规则解析失败：${e.message}`);
                 return null;
             }
         }
@@ -691,7 +756,7 @@ alert(1)
             // 先判断是否是尾号绑定格式
             const bindPattern = /^(.{1,6})=([\d-\/]+)$/;
             if (!bindPattern.test(text)) {
-                alert('输入内容不是有效的尾号绑定格式！\n格式示例：测试=1-1234/2-3678/3-5698（标识支持1-6位中文/字母/数字）');
+                showWarning('输入内容不是有效的尾号绑定格式！\n格式示例：测试=1-1234/2-3678/3-5698（标识支持1-6位中文/字母/数字）');
                 return;
             }
 
@@ -701,7 +766,7 @@ alert(1)
                 suffixBindRules[ruleData.prefix] = ruleData.rule;
                 saveSuffixBindRules();
 
-                alert(`成功绑定「${ruleData.prefix}」标识的尾号规则，共绑定${Object.keys(ruleData.rule).length}个地址ID`);
+                showSuccess(`成功绑定「${ruleData.prefix}」标识的尾号规则，共绑定${Object.keys(ruleData.rule).length}个地址ID`);
                 // 清空输入框
                 document.getElementById('configImportText').value = '';
                 // 更新提示和按钮
@@ -709,9 +774,6 @@ alert(1)
                 renderAllGenerateButtons();
             }
         }
-
-
-
 
 
 
@@ -723,7 +785,7 @@ alert(1)
                     const textToCopy = JSON.stringify([matchedItem], null, 4);
                     try {
                     await navigator.clipboard.writeText(textToCopy);
-                    showToast('✅ 配置已复制！');
+                    showToast(`✅${matchedItem[1]} 配置已复制！`);
                     } catch (err) {
                     console.error('复制失败:', err);
                     showError('❌ 请在安全环境（HTTPS/localhost）中使用');
@@ -732,8 +794,6 @@ alert(1)
                     showError(`⚠️ 未找到 ID 为 ${logicalId} 的配置`);
                 }
                 }
-
-
 
 
         // ====================== 导入文本监听与解析 ======================
@@ -786,7 +846,7 @@ alert(1)
 
             // 验证尾号
             if (!suffix || suffix.length !== 4 || !/^\d{4}$/.test(suffix)) {
-                alert('请输入有效的4位数字尾号，或输入绑定标识匹配尾号！');
+                showWarning('请输入有效的4位数字尾号，或输入绑定标识匹配尾号！');
                 return;
             }
 
@@ -814,8 +874,8 @@ alert(1)
                     prefixesForRandom = groups; // 使用分组后的数组
                 }
             }
-			// ========== 核心：new Function + return 执行规则 ==========
-                const detail = new Function(config[3])();
+			
+              
 				const fragment = document.createDocumentFragment();
             for (let i = 0; i < 20; i++) {
                 // 替换：生成真实姓名
@@ -828,7 +888,7 @@ alert(1)
                 // 11位手机号 = 3位前缀 + 4位随机 + 4位尾号
                 const phone = selectedPrefix + random4 + suffix;
 
-                
+                 const detail = new Function(config[3])();
 
                 const item = document.createElement('div');
                 item.className = 'address-item';
@@ -847,7 +907,7 @@ alert(1)
         <p>详细地址:${detail}</p>
         <button class="copy-btn" data-txt="${encodeURIComponent(fullText)}">复制本条地址</button>
         <div class="tip">复制成功</div>`;
-            fragment.appendChild(item);
+             fragment.appendChild(item);
             }
             list.appendChild(fragment); // 一次插入
             bindCopy();
@@ -883,17 +943,22 @@ alert(1)
         function bindClearUserConfigsEvent() {
             document.getElementById('clearUserConfigs').onclick = function() {
                 if (userCustomConfigs.length === 0) {
-                    alert('没有导入的地址配置可以清空。');
+				saveUserCustomConfigs();
+				localStorage.setItem('update_dismissed_until',100+'');
+                    showSuccess('没有导入的地址配置可以清空。');
                     return;
                 }
                 if (confirm('确定要清空所有通过“导入地址配置（JSON）”功能添加的自定义地址配置吗？此操作不可恢复。')) {
                     userCustomConfigs = []; // 清空数组
                     saveUserCustomConfigs(); // 保存到本地存储
+					localStorage.setItem('update_dismissed_until', 100+'');
                     mergeAllGenerateConfigs(); // 重新合并数据
                     renderAllGenerateButtons(); // 重新渲染按钮
-                    alert('已清空所有导入的地址配置！');
+                    showSuccess('已清空所有导入的地址配置！');
                 }
             };
+			
+			
         }
 
                                
@@ -901,14 +966,14 @@ alert(1)
         function importConfigFromJson                                                                                                                       () {
             const text = document.getElementById('configImportText').value.trim();
             if (!text) {
-                alert('请粘贴JSON格式的配置数组！');
+                showWarning('请粘贴JSON格式的配置数组！');
                 return;
             }
 
             // 检查是否是尾号绑定格式，如果是则提示使用绑定按钮
             const bindPattern = /^(.{1,6})=([\d-\/]+)$/;
             if (bindPattern.test(text)) {
-                alert('检测到尾号绑定格式！请使用旁边的「绑定尾号规则」按钮完成绑定。');
+                showWarning('检测到尾号绑定格式！请使用旁边的「绑定尾号规则」按钮完成绑定。');
                 return;
             }
 
@@ -924,19 +989,34 @@ alert(1)
                 const validConfigs = [];
                 importConfigs.forEach((config, index) => {
                     if (!Array.isArray(config) || config.length !== 4) {
-                        alert(`第${index + 1}条配置格式错误，跳过该条（需为长度4的数组）`);
+                        showWarning(`第${index + 1}条配置格式错误，跳过该条（需为长度4的数组）`);
                         return;
                     }
                     // 验证必填字段（街道）
                     if (!config[2] || !config[2].trim()) {
-                        alert(`第${index + 1}条配置固定街道不能为空，跳过该条`);
+                        showWarning(`第${index + 1}条配置固定街道不能为空，跳过该条`);
                         return;
+                    }
+                    if (!config[0] || !config[0].trim()) {
+                        config[0]=getAutoId();
+                        showToast(`第${index + 1}条ID配置为空，已自动生成id${config[0]}`);
+                       
+                    }
+                    if (!config[1] || !config[1].trim()) {
+                        config[1]=config[2].slice(0,2);
+                        showToast(`第${index + 1}条名字配置为空，已自动生成名字${config[1]}`);
+                        
+                    }
+                    if (!config[3] || !config[3].trim()) {
+                        config[3]="return A();";
+                        showToast(`第${index + 1}条详细地址规则配置为空，已设置默认规则([A-C]区[1-20]栋[1-100]室`);
+                    
                     }
                     validConfigs.push(config);
                 });
 
                 if (validConfigs.length === 0) {
-                    alert('未解析到有效配置！');
+                    showWarning('未解析到有效配置！');
                     return;
                 }
 
@@ -968,7 +1048,7 @@ alert(1)
                             const newId = getUniqueId(importId);
                             importConfig[0] = newId;
                             mergedConfigs.push(importConfig);
-                            alert(`ID${importId}已自动改为${newId}（避免重复）`);
+                            showSuccess(`ID${importId}已自动改为${newId}（避免重复）`);
                         }
                     }
                 });
@@ -988,10 +1068,10 @@ alert(1)
                 if (duplicateIds.length > 0) {
                     tip += `\n其中ID${duplicateIds.join(',')}为重复ID，已按你的选择处理`;
                 }
-                alert(tip);
+                showSuccess(tip);
 
             } catch (e) {
-                alert(`JSON解析失败：${e.message}！请检查格式是否正确`);
+                showError(`JSON解析失败：${e.message}！请检查格式是否正确`);
                 console.error(e);
             }
         }
@@ -1021,8 +1101,39 @@ alert(1)
                 }
             });
         }
+			
 
-                            /*============toasy===================*/
+		
+		
+		
+		
+		
+		function mergeAndSortConfigs(arr1, arr2) {
+		  // 1. 筛选  id 在 [1, 50] 且 ≠ "8" 的项
+		  const itemsToCopy = arr1.filter(item => {
+			const idStr = item[0];
+			const idNum = parseInt(idStr, 10);
+			return !isNaN(idNum) && idNum >= 1 && idNum <= 50 && idNum !== 8;
+		  });
+
+		  // 2. 浅拷贝所有项（
+		  const copiedFromArr1 = itemsToCopy.map(item => [...item]);
+		  const copiedArr2 = arr2.map(item => [...item]);
+
+		  // 3. 合并
+		  const merged = [...copiedArr2, ...copiedFromArr1];
+
+		  // 4. 按 id 数字升序排序
+		  merged.sort((a, b) => {
+			const idA = parseInt(a[0], 10);
+			const idB = parseInt(b[0], 10);
+			return idA - idB; 
+		  });
+
+		  return merged;
+		}
+
+                                    /*============toasy===================*/
 
         // 创建 Toast 容器（只创建一次）
         function ensureToastContainer() {
@@ -1034,15 +1145,11 @@ alert(1)
         }
 
         // 显示 Toast
-        function showToast(message, type = 'default', duration = 2000) {
+        function showToast(message, type = 'default', duration = 2500) {
         ensureToastContainer();
         const container = document.getElementById('toast-container');
 
-        // 移除上一个 Toast（避免堆积）
-        const oldToast = container.querySelector('.toast');
-        if (oldToast) {
-            oldToast.remove();
-        }
+       
 
         // 创建新 Toast
         const toast = document.createElement('div');
@@ -1069,12 +1176,9 @@ alert(1)
         function showSuccess(msg) { showToast(msg, 'success'); }
         function showWarning(msg) { showToast(msg, 'warning'); }
         function showError(msg)   { showToast(msg, 'error'); }
-
+		
 
     </script>
 </body>
 
 </html>
-
-
-
