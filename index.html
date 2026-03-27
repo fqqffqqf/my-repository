@@ -566,7 +566,7 @@ alert(1)
 
                        pressTimer=null;
                         b.addEventListener('mousedown', startPress);
-                        btn.addEventListener('touchstart', startPress);
+                        b.addEventListener('touchstart', startPress);
 
                         // 长按结束
                         b.addEventListener('mouseup', endPress);
@@ -662,7 +662,7 @@ alert(1)
 
                 clearTimeout(pressTimer);
                  pressTimer = setTimeout(() => {
-                const btnText = e.textContent.trim(); // 如 "20.琴"
+                const btnText = e.target.textContent.trim(); // 如 "20.琴"
                 const match = btnText.match(/^(\d+)\./); // 正则：开头的数字 + 点
 
                 if (!match) {
@@ -675,7 +675,7 @@ alert(1)
                 const matchedItem = allGenerateConfigs.find(item => item[0] === logicalId);
 
                 if (matchedItem) {
-                const textToCopy = JSON.stringify(matchedItem, null, 4); // 4空格缩进
+                const textToCopy = JSON.stringify([matchedItem], null, 4); // 4空格缩进
                 copyTextToClipboard(textToCopy);
                 } else {
                 alert(`⚠️ 未找到 ID 为 ${logicalId} 的配置`);
