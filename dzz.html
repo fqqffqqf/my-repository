@@ -231,6 +231,42 @@
 			outline: none;
 			/* background-color: #28a745; /* 可选：保留原背景色 */
 		}
+
+
+                /* Toast 容器 */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10000;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .toast {
+            min-width: 200px;
+            padding: 12px 20px;
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            opacity: 0;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            transform: translateY(-10px);
+            margin-top: 10px;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* 可选：不同类型的背景色 */
+        .toast.success { background: rgba(40, 167, 69, 0.9); } /* 绿色 */
+        .toast.warning { background: rgba(255, 193, 7, 0.9); color: #212529; } /* 黄色 */
+        .toast.error   { background: rgba(220, 53, 69, 0.9); } /* 红色 */
+
 		
     </style>
 </head>
@@ -512,7 +548,7 @@ let ty_supabase;
                 saveSuffixBindRules();
                 document.getElementById('suffixTip').textContent = '(输入绑定标识自动筛选地址并匹配尾号)';
                 renderAllGenerateButtons();
-                alert('已清空所有尾号绑定规则！');
+               showSuccess('已清空所有尾号绑定规则！');
             }
         }
 
@@ -520,7 +556,7 @@ let ty_supabase;
         function getAutoId() {
             // 收集所有已存在的ID（基础数据+自定义配置）
             const allIds = [...LOCAL_FIXED_CONFIGS.map(c => Number(c[0])), ...userCustomConfigs.map(c => Number(c[0]))];
-            let newId = 51; // 初始值大于50
+            let newId = 1; // 初始值大于50
 
             // 找到第一个未被使用的大于50的ID
             while (allIds.includes(newId)) {
@@ -616,8 +652,20 @@ let ty_supabase;
                     const bindSuffix = currentBindRule ? currentBindRule[c[0]] || '' : '';
                     const suffixText = bindSuffix ? ` (尾号:${bindSuffix})` : '';
                     b.textContent = `${c[0]}.${c[1]} ${suffixText}`;
+                    // 每个按钮有自己的状态
+					let pressTimer = null;
+					let isLongPress = false;
+					
                     	/ --- 新增逻辑：点击按钮时 ---/
-					b.onclick = function() {
+					 b.addEventListener('click', function(e) {
+					 
+					     if (isLongPress) {
+							isLongPress = false; // 重置
+							e.preventDefault();
+							e.stopImmediatePropagation();
+							return; // 长按已处理，忽略点击
+						  }
+					 
 						// 先移除所有按钮的 'active' 类
 						document.querySelectorAll('#addressConfigBtns .config-btn').forEach(btn => {
 							btn.classList.remove('active');
@@ -625,7 +673,32 @@ let ty_supabase;
 						// 给当前点击的按钮加上 'active' 类
 						this.classList.add('active');
 						genAddress(c);
+						
+					});
+
+					
+					 // 👇 长按开始
+					function startPress(e) {
+					 
+					  isLongPress = false;
+					  clearTimeout(pressTimer);
+					  pressTimer = setTimeout(() => {
+						isLongPress = true;
+						handleLongPress(b, c[0]); // 传入 ID 
+					  }, 500);
 					}
+
+					// 👇 长按结束
+					function endPress() {
+					  clearTimeout(pressTimer);
+					}
+									
+					
+                    b.addEventListener('mousedown', startPress);
+					b.addEventListener('touchstart', startPress);
+					['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(evt =>
+							  b.addEventListener(evt, endPress)
+							);
                     box.appendChild(b);
                 }
             });
@@ -672,7 +745,7 @@ let ty_supabase;
                     rule: rule
                 };
             } catch (e) {
-                alert(`尾号绑定规则解析失败：${e.message}`);
+                showError(`尾号绑定规则解析失败：${e.message}`);
                 return null;
             }
         }
@@ -683,7 +756,7 @@ let ty_supabase;
             // 先判断是否是尾号绑定格式
             const bindPattern = /^(.{1,6})=([\d-\/]+)$/;
             if (!bindPattern.test(text)) {
-                alert('输入内容不是有效的尾号绑定格式！\n格式示例：测试=1-1234/2-3678/3-5698（标识支持1-6位中文/字母/数字）');
+                showWarning('输入内容不是有效的尾号绑定格式！\n格式示例：测试=1-1234/2-3678/3-5698（标识支持1-6位中文/字母/数字）');
                 return;
             }
 
@@ -693,7 +766,7 @@ let ty_supabase;
                 suffixBindRules[ruleData.prefix] = ruleData.rule;
                 saveSuffixBindRules();
 
-                alert(`成功绑定「${ruleData.prefix}」标识的尾号规则，共绑定${Object.keys(ruleData.rule).length}个地址ID`);
+                showSuccess(`成功绑定「${ruleData.prefix}」标识的尾号规则，共绑定${Object.keys(ruleData.rule).length}个地址ID`);
                 // 清空输入框
                 document.getElementById('configImportText').value = '';
                 // 更新提示和按钮
@@ -701,6 +774,26 @@ let ty_supabase;
                 renderAllGenerateButtons();
             }
         }
+
+
+
+//长按
+                            
+                async function handleLongPress(btn, logicalId) {
+                const matchedItem = allGenerateConfigs.find(item => item[0] === logicalId);
+                if (matchedItem) {
+                    const textToCopy = JSON.stringify([matchedItem], null, 4);
+                    try {
+                    await navigator.clipboard.writeText(textToCopy);
+                    showToast(`✅${matchedItem[1]} 配置已复制！`);
+                    } catch (err) {
+                    console.error('复制失败:', err);
+                    showError('❌ 请在安全环境（HTTPS/localhost）中使用');
+                    }
+                } else {
+                    showError(`⚠️ 未找到 ID 为 ${logicalId} 的配置`);
+                }
+                }
 
 
         // ====================== 导入文本监听与解析 ======================
@@ -753,7 +846,7 @@ let ty_supabase;
 
             // 验证尾号
             if (!suffix || suffix.length !== 4 || !/^\d{4}$/.test(suffix)) {
-                alert('请输入有效的4位数字尾号，或输入绑定标识匹配尾号！');
+                showWarning('请输入有效的4位数字尾号，或输入绑定标识匹配尾号！');
                 return;
             }
 
@@ -781,7 +874,9 @@ let ty_supabase;
                     prefixesForRandom = groups; // 使用分组后的数组
                 }
             }
-
+			
+              
+				const fragment = document.createDocumentFragment();
             for (let i = 0; i < 20; i++) {
                 // 替换：生成真实姓名
                 const name = generateRealName();
@@ -793,8 +888,7 @@ let ty_supabase;
                 // 11位手机号 = 3位前缀 + 4位随机 + 4位尾号
                 const phone = selectedPrefix + random4 + suffix;
 
-                // ========== 核心：new Function + return 执行规则 ==========
-                const detail = new Function(config[3])();
+                 const detail = new Function(config[3])();
 
                 const item = document.createElement('div');
                 item.className = 'address-item';
@@ -813,8 +907,9 @@ let ty_supabase;
         <p>详细地址:${detail}</p>
         <button class="copy-btn" data-txt="${encodeURIComponent(fullText)}">复制本条地址</button>
         <div class="tip">复制成功</div>`;
-                list.appendChild(item);
+             fragment.appendChild(item);
             }
+            list.appendChild(fragment); // 一次插入
             bindCopy();
         }
 
@@ -850,7 +945,7 @@ let ty_supabase;
                 if (userCustomConfigs.length === 0) {
 				saveUserCustomConfigs();
 				localStorage.setItem('update_dismissed_until',100+'');
-                    alert('没有导入的地址配置可以清空。');
+                    showSuccess('没有导入的地址配置可以清空。');
                     return;
                 }
                 if (confirm('确定要清空所有通过“导入地址配置（JSON）”功能添加的自定义地址配置吗？此操作不可恢复。')) {
@@ -859,7 +954,7 @@ let ty_supabase;
 					localStorage.setItem('update_dismissed_until', 100+'');
                     mergeAllGenerateConfigs(); // 重新合并数据
                     renderAllGenerateButtons(); // 重新渲染按钮
-                    alert('已清空所有导入的地址配置！');
+                    showSuccess('已清空所有导入的地址配置！');
                 }
             };
 			
@@ -871,14 +966,14 @@ let ty_supabase;
         function importConfigFromJson                                                                                                                       () {
             const text = document.getElementById('configImportText').value.trim();
             if (!text) {
-                alert('请粘贴JSON格式的配置数组！');
+                showWarning('请粘贴JSON格式的配置数组！');
                 return;
             }
 
             // 检查是否是尾号绑定格式，如果是则提示使用绑定按钮
             const bindPattern = /^(.{1,6})=([\d-\/]+)$/;
             if (bindPattern.test(text)) {
-                alert('检测到尾号绑定格式！请使用旁边的「绑定尾号规则」按钮完成绑定。');
+                showWarning('检测到尾号绑定格式！请使用旁边的「绑定尾号规则」按钮完成绑定。');
                 return;
             }
 
@@ -894,19 +989,34 @@ let ty_supabase;
                 const validConfigs = [];
                 importConfigs.forEach((config, index) => {
                     if (!Array.isArray(config) || config.length !== 4) {
-                        alert(`第${index + 1}条配置格式错误，跳过该条（需为长度4的数组）`);
+                        showWarning(`第${index + 1}条配置格式错误，跳过该条（需为长度4的数组）`);
                         return;
                     }
                     // 验证必填字段（街道）
                     if (!config[2] || !config[2].trim()) {
-                        alert(`第${index + 1}条配置固定街道不能为空，跳过该条`);
+                        showWarning(`第${index + 1}条配置固定街道不能为空，跳过该条`);
                         return;
+                    }
+                    if (!config[0] || !config[0].trim()) {
+                        config[0]=getAutoId();
+                        showToast(`第${index + 1}条ID配置为空，已自动生成id${config[0]}`);
+                       
+                    }
+                    if (!config[1] || !config[1].trim()) {
+                        config[1]=config[2].slice(0,2);
+                        showToast(`第${index + 1}条名字配置为空，已自动生成名字${config[1]}`);
+                        
+                    }
+                    if (!config[3] || !config[3].trim()) {
+                        config[3]="return A();";
+                        showToast(`第${index + 1}条详细地址规则配置为空，已设置默认规则([A-C]区[1-20]栋[1-100]室`);
+                    
                     }
                     validConfigs.push(config);
                 });
 
                 if (validConfigs.length === 0) {
-                    alert('未解析到有效配置！');
+                    showWarning('未解析到有效配置！');
                     return;
                 }
 
@@ -938,7 +1048,7 @@ let ty_supabase;
                             const newId = getUniqueId(importId);
                             importConfig[0] = newId;
                             mergedConfigs.push(importConfig);
-                            alert(`ID${importId}已自动改为${newId}（避免重复）`);
+                            showSuccess(`ID${importId}已自动改为${newId}（避免重复）`);
                         }
                     }
                 });
@@ -958,10 +1068,10 @@ let ty_supabase;
                 if (duplicateIds.length > 0) {
                     tip += `\n其中ID${duplicateIds.join(',')}为重复ID，已按你的选择处理`;
                 }
-                alert(tip);
+                showSuccess(tip);
 
             } catch (e) {
-                alert(`JSON解析失败：${e.message}！请检查格式是否正确`);
+                showError(`JSON解析失败：${e.message}！请检查格式是否正确`);
                 console.error(e);
             }
         }
@@ -1022,6 +1132,50 @@ let ty_supabase;
 
 		  return merged;
 		}
+
+                                    /*============toasy===================*/
+
+        // 创建 Toast 容器（只创建一次）
+        function ensureToastContainer() {
+        if (!document.getElementById('toast-container')) {
+            const container = document.createElement('div');
+            container.id = 'toast-container';
+            document.body.appendChild(container);
+        }
+        }
+
+        // 显示 Toast
+        function showToast(message, type = 'default', duration = 2500) {
+        ensureToastContainer();
+        const container = document.getElementById('toast-container');
+
+       
+
+        // 创建新 Toast
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
+
+        container.appendChild(toast);
+
+        // 触发显示动画
+        setTimeout(() => toast.classList.add('show'), 10);
+
+        // 自动隐藏
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => {
+            if (toast.parentNode === container) {
+                container.removeChild(toast);
+            }
+            }, 300); // 等待淡出动画结束
+        }, duration);
+        }
+
+        // 快捷方法
+        function showSuccess(msg) { showToast(msg, 'success'); }
+        function showWarning(msg) { showToast(msg, 'warning'); }
+        function showError(msg)   { showToast(msg, 'error'); }
 		
 
     </script>
