@@ -563,6 +563,15 @@ alert(1)
 						this.classList.add('active');
 						genAddress(c);
 					}
+
+                       pressTimer=null;
+                        b.addEventListener('mousedown', startPress);
+                        btn.addEventListener('touchstart', startPress);
+
+                        // 长按结束
+                        b.addEventListener('mouseup', endPress);
+                        b.addEventListener('mouseleave', endPress);
+                        b.addEventListener('touchend', endPress);
                     box.appendChild(b);
                 }
             });
@@ -638,6 +647,59 @@ alert(1)
                 renderAllGenerateButtons();
             }
         }
+
+
+
+
+
+
+
+//长按
+            let pressTimer=null;
+
+            function startPress(e) {
+                e.preventDefault(); // 阻止默认行为（比如移动端的上下文菜单）
+
+                clearTimeout(pressTimer);
+                 pressTimer = setTimeout(() => {
+                const btnText = e.textContent.trim(); // 如 "20.琴"
+                const match = btnText.match(/^(\d+)\./); // 正则：开头的数字 + 点
+
+                if (!match) {
+                alert('❌ 按钮格式错误，应为 "数字.名称"');
+                return;
+                }
+
+                const logicalId = match[1]; // 提取出 "20"
+                  // 查找子数组
+                const matchedItem = allGenerateConfigs.find(item => item[0] === logicalId);
+
+                if (matchedItem) {
+                const textToCopy = JSON.stringify(matchedItem, null, 4); // 4空格缩进
+                copyTextToClipboard(textToCopy);
+                } else {
+                alert(`⚠️ 未找到 ID 为 ${logicalId} 的配置`);
+                }
+                        }, 500); // 长按阈值：500ms
+
+            }
+
+            function endPress() {
+                clearTimeout(pressTimer);
+            }
+
+            function copyTextToClipboard(text) {
+                navigator.clipboard.writeText(text).then(() => {
+                alert('已复制：' + text);
+                }).catch(err => {
+                console.error('复制失败:', err);
+                // 可选：降级方案（如使用 document.execCommand）
+                });
+            }
+
+
+
+
 
 
         // ====================== 导入文本监听与解析 ======================
