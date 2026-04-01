@@ -663,8 +663,7 @@ let ty_supabase;
 					 
 					     if (isLongPress) {
 							isLongPress = false; // 重置
-							e.preventDefault();
-							e.stopImmediatePropagation();
+							
 							return; // 长按已处理，忽略点击
 						  }
 					 
@@ -687,7 +686,7 @@ let ty_supabase;
 					  pressTimer = setTimeout(() => {
 						isLongPress = true;
 						handleLongPress(b, c[0]); // 传入 ID 
-					  }, 500);
+					  }, 1000);
 					}
 
 					// 👇 长按结束
@@ -1024,7 +1023,7 @@ let ty_supabase;
                         default:break;
                      }
                     validConfigs.push(config);
-                    showToast(config[0]+"."+config[1],"success",6000);
+                    
                 });
 
                 if (validConfigs.length === 0) {
@@ -1063,6 +1062,9 @@ let ty_supabase;
                             showSuccess(`ID${importId}已自动改为${newId}（避免重复）`);
                         }
                     }
+                    if(importConfig.length<=3){
+					    showToast(importConfig[0]+"."+importConfig[1],"default",10000);
+					}
                 });
 
                 // 更新用户配置
