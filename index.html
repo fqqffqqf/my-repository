@@ -1062,7 +1062,7 @@ let ty_supabase;
                             showSuccess(`ID${importId}已自动改为${newId}（避免重复）`);
                         }
                     }
-                    if(importConfig.length<=3){
+                    if(validConfigs.length<=3){
 					    showToast(importConfig[0]+"."+importConfig[1],"default",10000);
 					}
                 });
