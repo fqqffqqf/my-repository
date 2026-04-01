@@ -686,7 +686,7 @@ let ty_supabase;
 					  pressTimer = setTimeout(() => {
 						isLongPress = true;
 						handleLongPress(b, c[0]); // 传入 ID 
-					  }, 400);
+					  }, 1000);
 					}
 
 					// 👇 长按结束
@@ -697,7 +697,7 @@ let ty_supabase;
 					
                     b.addEventListener('mousedown', startPress);
 					b.addEventListener('touchstart', startPress);
-					['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(evt =>
+					['mouseup', 'mouseleave', 'touchend', 'touchhmove'].forEach(evt =>
 							  b.addEventListener(evt, endPress)
 							);
                     box.appendChild(b);
