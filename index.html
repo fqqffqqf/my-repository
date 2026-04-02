@@ -267,7 +267,85 @@
         .toast.warning { background: rgba(255, 193, 7, 0.9); color: #212529; } /* 黄色 */
         .toast.error   { background: rgba(220, 53, 69, 0.9); } /* 红色 */
 
-		
+		/* 模态框基础样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 400px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .modal-header {
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .modal-body {
+            margin: 15px 0;
+        }
+        
+        .input-group {
+            margin-bottom: 15px;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .input-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        
+        .modal-footer {
+            text-align: right;
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+        }
+        
+        button {
+            padding: 8px 16px;
+            margin-left: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .close {
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -278,8 +356,8 @@
             <input type="text" id="phoneSuffix" maxlength="6" placeholder="尾号/标识">
         </div>
         <div class="input-group">
-            <label>自定义手机号前3位</label>
-            <input type="text" id="phonePrefixCustom" placeholder="输入数字，如：123456789 (手机前3位随机123,456,789)">
+            <label>自定义手机号前3位<span class="suffix-tip" >(默认140/160/161)</span></label>
+            <input type="text" id="phonePrefixCustom" placeholder="如:131159179181 (随机131/159/179/181)">
         </div>
 
         <div class="btn-group">
@@ -316,7 +394,29 @@
         
     </div>
 		
-
+       <!-- 模态框 -->
+    <div id="configModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="close">&times;</span>
+                <h3>配置选项</h3>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label for="familyNamesInput">姓:</label>
+                    <input type="text" id="familyNamesInput" placeholder="请输入姓氏列表">
+                </div>
+                <div class="input-group">
+                    <label for="givenNamesInput">名:</label>
+                    <input type="text" id="givenNamesInput" placeholder="请输入名字列表">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancelBtn">取消</button>
+                <button class="btn-primary" id="saveBtn">保存</button>
+            </div>
+        </div>
+    </div>
 
     <script>
 
@@ -420,16 +520,19 @@ let ty_supabase;
             return communityArray[Math.floor(Math.random() * communityArray.length)] + " ";
         }
 
+
         // ====================== 姓名生成数据 ======================
-        const familyNames = ["王", "李", "张", "刘", "陈", "杨", "赵", "黄", "周", "吴", "徐", "孙", "胡", "朱", "高", "林", "何", "郭", "马", "罗"];
-        const givenNames = ["伟", "芳", "娜", "敏", "静", "丽", "强", "磊", "洋", "勇", "艳", "杰", "娟", "涛", "明", "超", "秀", "霞", "平", "军"];
+        let familyNames = ["王", "李", "张", "刘", "陈", "杨", "赵", "黄", "周", "吴", "徐", "孙", "胡", "朱", "高", "林", "何", "郭", "马", "罗"];
+        let givenNames = ["伟", "芳", "娜", "敏", "静", "丽", "强", "磊", "洋", "勇", "艳", "杰", "娟", "涛", "明", "超", "秀", "霞", "平", "军"];
+		const familyNames1 = ["王", "李", "张", "刘", "陈", "杨", "赵", "黄", "周", "吴", "徐", "孙", "胡", "朱", "高", "林", "何", "郭", "马", "罗"];
+        const givenNames1 = ["伟", "芳", "娜", "敏", "静", "丽", "强", "磊", "洋", "勇", "艳", "杰", "娟", "涛", "明", "超", "秀", "霞", "平", "军"];
 
         // 生成真实姓名
         function generateRealName() {
             // 随机姓氏
             const familyName = familyNames[Math.floor(Math.random() * familyNames.length)];
             // 随机名字（单字/双字）
-            const isTwoChar = Math.random() > 0.5;
+            const isTwoChar = Math.random() > 0.1;
             let givenName = givenNames[Math.floor(Math.random() * givenNames.length)];
             if (isTwoChar) {
                 givenName += givenNames[Math.floor(Math.random() * givenNames.length)];
@@ -446,12 +549,20 @@ let ty_supabase;
         let allGenerateConfigs = []; // 所有可生成地址的数据
         let suffixBindRules = {}; // 多组尾号绑定规则 {标识1: {1:'1234', 2:'3678'}, 标识2: {4:'5678',5:'8901'}}
 		let data=[];
-
+        // 模态框DOM元素
+        const phonePrefixCustom = document.getElementById('phonePrefixCustom');
+        const configModal = document.getElementById('configModal');
+        const familyNamesInput = document.getElementById('familyNamesInput');
+        const givenNamesInput = document.getElementById('givenNamesInput');
+        const closeBtn = document.querySelector('.close');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const saveBtn = document.getElementById('saveBtn');
         window.onload = async function () {
             // 初始化
 			bindClearUserConfigsEvent(); // 绑定清空用户配置事件
             loadUserCustomConfigs();
             loadSuffixBindRules();
+            loadConfigNames();
             mergeAllGenerateConfigs();
             loadPhoneHistory();
             bindImportExportEvents();
@@ -466,7 +577,12 @@ let ty_supabase;
                 updateSuffixTip();
                 renderAllGenerateButtons(); // 输入变化立即重新渲染按钮（筛选）
             });
-
+			
+			phonePrefixCustom.addEventListener('input', function() {
+				if (this.value.includes('姓名')) {
+                openModal();
+				}
+            });
 			//const excludeIds = LOCAL_FIXED_CONFIGS.map(item => parseInt(item[0], 10)-1);
 			
             try {
@@ -523,6 +639,22 @@ let ty_supabase;
             
         }
 
+		// 加载配置姓名的函数
+		function loadConfigNames() {
+			const storedFamilyNames = localStorage.getItem('familyNames');
+			const storedGivenNames = localStorage.getItem('givenNames');
+			
+			// 如果本地有存储的姓氏数据，则解析并替换默认数组
+			if (storedFamilyNames) {
+				familyNames = storedFamilyNames.split('').filter(char => /[\u4e00-\u9fa5]/.test(char));
+			}
+			
+			// 如果本地有存储的名字数据，则解析并替换默认数组
+			if (storedGivenNames) {
+				givenNames = storedGivenNames.split('').filter(char => /[\u4e00-\u9fa5]/.test(char));
+			}
+		}
+
 
         // 保存用户自定义配置
         function saveUserCustomConfigs() {
@@ -553,7 +685,43 @@ let ty_supabase;
                showSuccess('已清空所有尾号绑定规则！');
             }
         }
+		//模态框
+		function openModal() {
+            loadConfigData();
+            configModal.style.display = 'block';
+        }
 
+        function closeModal() {
+            configModal.style.display = 'none';
+			loadPhoneHistory();
+        }
+
+        function loadConfigData() {   
+            familyNamesInput.value = familyNames.join(',');
+            givenNamesInput.value = givenNames.join(',');
+        }
+
+        function saveConfigData() {
+		//输入框不为空存 空就存原始数据
+			if (familyNamesInput.value.trim()) {
+				localStorage.setItem('familyNames', familyNamesInput.value.trim());
+			}else{
+				localStorage.setItem('familyNames', familyNames1.join(','));
+			}
+					
+			if (givenNamesInput.value.trim()) {
+				 localStorage.setItem('givenNames', givenNamesInput.value.trim());
+			}else{
+			     localStorage.setItem('givenNames', givenNames1.join(','));
+			}
+			loadConfigNames();
+            closeModal();
+        }
+
+        // 事件绑定
+        closeBtn.onclick = closeModal;
+        cancelBtn.onclick = closeModal;
+        saveBtn.onclick = saveConfigData;
         // ====================== 辅助函数：生成大于50的唯一ID ======================
         function getAutoId() {
             // 收集所有已存在的ID（基础数据+自定义配置）
