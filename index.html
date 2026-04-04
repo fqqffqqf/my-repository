@@ -950,21 +950,26 @@ let ty_supabase;
 
 //长按
                             
-                async function handleLongPress(btn, logicalId) {
-                const matchedItem = allGenerateConfigs.find(item => item[0] === logicalId);
-                if (matchedItem) {
-                    const textToCopy = JSON.stringify([matchedItem], null, 4);
-                    try {
-                    await navigator.clipboard.writeText(textToCopy);
-                    showToast(`✅${matchedItem[1]} 配置已复制！`);
-                    } catch (err) {
-                    console.error('复制失败:', err);
-                    showError('❌ 请在安全环境（HTTPS/localhost）中使用');
-                    }
-                } else {
-                    showError(`⚠️ 未找到 ID 为 ${logicalId} 的配置`);
-                }
-                }
+			async function handleLongPress(btn, logicalId) {
+			  const matchedItem = allGenerateConfigs.find(item => item[0] === logicalId);
+			  if (matchedItem) {
+				const textToCopy = JSON.stringify([matchedItem], null, 4);
+				try {
+				  const result = await copyToClipboard(textToCopy);
+				  if (result.success) {
+					showToast(`✅${matchedItem[1]} 配置已复制！`);
+				  } else {
+					console.error('复制失败，详细信息:', result.error);
+					showError('❌ 无法复制到剪贴板，请手动选择并复制。');
+				  }
+				} catch (err) {
+				  console.error('复制流程发生未知错误:', err);
+				  showError('❌ 复制时发生未知错误');
+				}
+			  } else {
+				showError(`⚠️ 未找到 ID 为 ${logicalId} 的配置`);
+			  }
+			}
 
 
         // ====================== 导入文本监听与解析 ======================
@@ -1304,13 +1309,13 @@ let ty_supabase;
         // 绑定复制事件
         function bindCopy() {
             document.querySelectorAll('.copy-btn').forEach(b => {
-                b.onclick = function () {
+                b.onclick = async function () {
 					// --- 新增：点击时添加高亮样式 ---
 					 document.querySelectorAll('.copy-btn').forEach(btn => {
 						btn.classList.remove('clicked');
 					});
                     this.classList.add('clicked');
-                    navigator.clipboard.writeText(decodeURIComponent(this.dataset.txt));
+                    await copyToClipboard(decodeURIComponent(this.dataset.txt));
                     this.nextElementSibling.classList.add('show');
                     setTimeout(() => this.nextElementSibling.classList.remove('show'), 2500);
                 }
@@ -1348,7 +1353,7 @@ let ty_supabase;
 		  return merged;
 		}
 
-                                    /*============toasy===================*/
+                  /*============toasy===================*/
 
         // 创建 Toast 容器（只创建一次）
         function ensureToastContainer() {
@@ -1392,6 +1397,71 @@ let ty_supabase;
         function showWarning(msg) { showToast(msg, 'warning'); }
         function showError(msg)   { showToast(msg, 'error'); }
 		
+		/*============复制===================*/
+		
+					
+			
+			async function copyToClipboard(text) {
+			 
+			  if (navigator.clipboard && window.isSecureContext) {
+				try {
+				  await navigator.clipboard.writeText(text);
+				  return { success: true, method: 'Clipboard API' };
+				} catch (err) {
+				  console.warn('Clipboard API 复制失败:', err);
+				 
+				}
+			  } else {
+				console.warn('浏览器不支持 Clipboard API 或不在安全上下文 (HTTPS/localhost)');
+			  }
+
+			 
+			  const textArea = document.createElement("textarea");
+			  textArea.value = text;
+
+			 
+			  textArea.style.cssText = `
+				position: fixed;
+				top: -9999px;
+				left: -9999px;
+				width: 1px;
+				height: 1px;
+				padding: 0;
+				border: 0;
+				margin: 0;
+				outline: none;
+				box-shadow: none;
+				background: transparent;
+			  `;
+
+			  document.body.appendChild(textArea);
+			  
+			  
+			  textArea.focus();
+			  textArea.select();
+
+			  let success = false;
+			  let error = undefined;
+			  try {
+				
+				success = document.execCommand('copy');
+				if (!success) {
+				  error = new Error('execCommand returned false');
+				}
+			  } catch (err) {
+				console.error('execCommand 复制过程中发生错误:', err);
+				error = err;
+			  }
+
+			  // 复制操作完成后，立即将临时元素从 DOM 中移除
+			  document.body.removeChild(textArea);
+
+			  if (success) {
+				return { success: true, method: 'execCommand' };
+			  } else {
+				return { success: false, error };
+			  }
+			}
 
     </script>
 </body>
